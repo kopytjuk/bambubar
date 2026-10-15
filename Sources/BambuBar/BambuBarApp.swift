@@ -48,9 +48,9 @@ struct ContentView: View {
                 Divider()
                 ForEach(model.ams) { unit in
                     HStack {
-                        Label("AMS \(Int(unit.id).map { $0 + 1 } ?? 0) Feuchte (5 = feucht)", systemImage: "humidity")
+                        Label("AMS \(Int(unit.id).map { $0 + 1 } ?? 0) Feuchte", systemImage: "humidity")
                         Spacer()
-                        Text(unit.percent.map { "\($0)% (Stufe \(unit.wetness)/5)" } ?? "Stufe \(unit.wetness)/5")
+                        Text(unit.percent.map { "\($0)%" } ?? "Stufe \(unit.wetness)/5")
                     }.font(.caption)
                 }
             }
