@@ -18,7 +18,11 @@ final class PrinterModel: ObservableObject {
     @AppStorage("totalPrintSeconds") var totalPrintSeconds = 0.0
     @Published var ams: [AMSUnit] = []
 
-    @Published var connection = "Nicht konfiguriert"
+    @Published var connection = ConnectionStatus.notConfigured
+    /// "system", "de" or "en"
+    @Published var language: String = UserDefaults.standard.string(forKey: "language") ?? "system" {
+        didSet { UserDefaults.standard.set(language, forKey: "language") }
+    }
     @Published var gcodeState = ""
     @Published var percent = 0
     @Published var remainingMin = 0
@@ -50,7 +54,7 @@ final class PrinterModel: ObservableObject {
     }
 
     func connect() {
-        guard !host.isEmpty, !serial.isEmpty, !accessCode.isEmpty else { connection = "Nicht konfiguriert"; return }
+        guard !host.isEmpty, !serial.isEmpty, !accessCode.isEmpty else { connection = .notConfigured; return }
         let req = #"{"pushing":{"sequence_id":"0","command":"pushall"}}"#
         mqtt.start(host: host, user: "bblp", pass: accessCode,
                    subscribe: "device/\(serial)/report",
@@ -81,14 +85,36 @@ final class PrinterModel: ObservableObject {
         }
     }
 
+    var isGerman: Bool {
+        switch language {
+        case "de": return true
+        case "en": return false
+        default: return Locale.preferredLanguages.first?.hasPrefix("de") ?? false
+        }
+    }
+
+    func tr(_ de: String, _ en: String) -> String { isGerman ? de : en }
+
+    var connectionText: String {
+        switch connection {
+        case .notConfigured: return tr("Nicht konfiguriert", "Not configured")
+        case .connecting: return tr("Verbinde …", "Connecting…")
+        case .connected: return tr("Verbunden", "Connected")
+        case .denied: return tr("Login abgelehnt – Access Code prüfen", "Login rejected – check access code")
+        case .disconnected: return tr("Verbindung getrennt", "Disconnected")
+        case .waiting: return tr("Warte auf Netzwerk", "Waiting for network")
+        case .failed(let msg): return tr("Fehler: ", "Error: ") + msg
+        }
+    }
+
     var stateText: String {
         switch gcodeState {
-        case "RUNNING": return "Druckt"
-        case "PREPARE": return "Bereitet vor"
-        case "PAUSE": return "Pausiert"
-        case "FINISH": return "Fertig"
-        case "FAILED": return "Fehlgeschlagen"
-        case "IDLE": return "Bereit"
+        case "RUNNING": return tr("Druckt", "Printing")
+        case "PREPARE": return tr("Bereitet vor", "Preparing")
+        case "PAUSE": return tr("Pausiert", "Paused")
+        case "FINISH": return tr("Fertig", "Finished")
+        case "FAILED": return tr("Fehlgeschlagen", "Failed")
+        case "IDLE": return tr("Bereit", "Idle")
         case "": return "–"
         default: return gcodeState
         }
@@ -116,9 +142,9 @@ final class PrinterModel: ObservableObject {
     var menuTitle: String {
         switch gcodeState {
         case "RUNNING": return "\(percent)% · \(remainingText)"
-        case "PAUSE": return "Pause"
-        case "FINISH": return "Fertig"
-        case "FAILED": return "Fehler"
+        case "PAUSE": return tr("Pause", "Paused")
+        case "FINISH": return tr("Fertig", "Done")
+        case "FAILED": return tr("Fehler", "Failed")
         default: return ""
         }
     }

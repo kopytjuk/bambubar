@@ -1,10 +1,16 @@
 import Foundation
 import Network
 
+enum ConnectionStatus {
+    case notConfigured, connecting, connected, denied, disconnected
+    case waiting(String)
+    case failed(String)
+}
+
 /// Minimal MQTT 3.1.1 client (QoS 0, TLS with self-signed cert) – just enough for Bambu Lab's local broker.
 final class MQTTClient {
     var onMessage: ((String, Data) -> Void)?
-    var onStatus: ((String) -> Void)?
+    var onStatus: ((ConnectionStatus) -> Void)?
 
     private let queue = DispatchQueue(label: "mqtt")
     private var conn: NWConnection?
@@ -51,7 +57,7 @@ final class MQTTClient {
         let params = NWParameters(tls: tls, tcp: NWProtocolTCP.Options())
         let c = NWConnection(host: NWEndpoint.Host(host), port: 8883, using: params)
         conn = c
-        onStatus?("Verbinde …")
+        onStatus?(.connecting)
 
         c.stateUpdateHandler = { [weak self] state in
             guard let self, gen == self.generation else { return }
@@ -60,10 +66,10 @@ final class MQTTClient {
                 self.send(self.connectPacket())
                 self.receive(gen)
             case .failed(let e):
-                self.onStatus?("Fehler: \(e.localizedDescription)")
+                self.onStatus?(.failed(e.localizedDescription))
                 self.scheduleReconnect(gen)
             case .waiting(let e):
-                self.onStatus?("Warte auf Netzwerk: \(e.localizedDescription)")
+                self.onStatus?(.waiting(e.localizedDescription))
             default: break
             }
         }
@@ -83,7 +89,7 @@ final class MQTTClient {
             guard let self, gen == self.generation else { return }
             if let data { self.buffer.append(data); self.parse() }
             if err != nil || done {
-                self.onStatus?("Verbindung getrennt")
+                self.onStatus?(.disconnected)
                 self.scheduleReconnect(gen)
             } else {
                 self.receive(gen)
@@ -114,12 +120,12 @@ final class MQTTClient {
         switch first >> 4 {
         case 2: // CONNACK
             if body.count >= 2, body[1] == 0 {
-                onStatus?("Verbunden")
+                onStatus?(.connected)
                 send(subscribePacket())
                 requestFullState()
                 startPing()
             } else {
-                onStatus?("Login abgelehnt – Access Code prüfen")
+                onStatus?(.denied)
                 wanted = false
                 conn?.cancel()
             }
