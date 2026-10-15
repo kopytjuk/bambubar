@@ -10,7 +10,10 @@ struct BambuBarApp: App {
         MenuBarExtra {
             ContentView(model: model)
         } label: {
-            Label(model.menuTitle, systemImage: model.symbol)
+            HStack(spacing: 4) {
+                Image(nsImage: bambooMenuBarImage())
+                if !model.menuTitle.isEmpty { Text(model.menuTitle) }
+            }
         }
         .menuBarExtraStyle(.window)
     }

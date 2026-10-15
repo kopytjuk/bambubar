@@ -114,6 +114,12 @@ final class PrinterModel: ObservableObject {
     }
 
     var menuTitle: String {
-        gcodeState == "RUNNING" ? "\(percent)% · \(remainingText)" : ""
+        switch gcodeState {
+        case "RUNNING": return "\(percent)% · \(remainingText)"
+        case "PAUSE": return "Pause"
+        case "FINISH": return "Fertig"
+        case "FAILED": return "Fehler"
+        default: return ""
+        }
     }
 }
