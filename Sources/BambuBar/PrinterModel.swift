@@ -21,8 +21,12 @@ final class PrinterModel: ObservableObject {
     @Published var connection = ConnectionStatus.notConfigured
     /// "system", "de" or "en"
     @Published var language: String = UserDefaults.standard.string(forKey: "language") ?? "system" {
-        didSet { UserDefaults.standard.set(language, forKey: "language") }
+        didSet { if !isPreview { UserDefaults.standard.set(language, forKey: "language") } }
     }
+
+    /// Preview models (used for the README screenshot) never connect and never touch stored settings.
+    private let isPreview: Bool
+    var previewPrintSeconds: Double?
     @Published var gcodeState = ""
     @Published var percent = 0
     @Published var remainingMin = 0
@@ -36,7 +40,9 @@ final class PrinterModel: ObservableObject {
 
     private let mqtt = MQTTClient()
 
-    init() {
+    init(preview: Bool = false) {
+        isPreview = preview
+        if preview { return }
         mqtt.onStatus = { [weak self] s in DispatchQueue.main.async { self?.connection = s } }
         mqtt.onMessage = { [weak self] _, data in
             guard let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -135,7 +141,8 @@ final class PrinterModel: ObservableObject {
     }
 
     var totalPrintText: String {
-        let h = Int(totalPrintSeconds) / 3600, m = Int(totalPrintSeconds) % 3600 / 60
+        let t = previewPrintSeconds ?? totalPrintSeconds
+        let h = Int(t) / 3600, m = Int(t) % 3600 / 60
         return "\(h)h \(m)m"
     }
 

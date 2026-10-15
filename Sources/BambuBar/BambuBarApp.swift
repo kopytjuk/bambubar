@@ -4,7 +4,13 @@ import SwiftUI
 struct BambuBarApp: App {
     @StateObject private var model = PrinterModel()
 
-    init() { NSApplication.shared.setActivationPolicy(.accessory) }
+    init() {
+        NSApplication.shared.setActivationPolicy(.accessory)
+        if let i = CommandLine.arguments.firstIndex(of: "--screenshot"), i + 1 < CommandLine.arguments.count {
+            MainActor.assumeIsolated { renderScreenshot(to: CommandLine.arguments[i + 1]) }
+            exit(0)
+        }
+    }
 
     var body: some Scene {
         MenuBarExtra {
@@ -19,8 +25,25 @@ struct BambuBarApp: App {
     }
 }
 
+/// Plain SwiftUI bar (also renders in the offscreen README screenshot, unlike the AppKit-backed ProgressView).
+struct ProgressBar: View {
+    var fraction: Double
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.gray.opacity(0.25))
+                Capsule().fill(Color(red: 0.0, green: 0.68, blue: 0.26))
+                    .frame(width: geo.size.width * min(max(fraction, 0), 1))
+            }
+        }
+        .frame(height: 6)
+    }
+}
+
 struct ContentView: View {
     @ObservedObject var model: PrinterModel
+    /// Offscreen rendering cannot draw real buttons, so the screenshot uses look-alikes.
+    var preview = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -31,7 +54,7 @@ struct ContentView: View {
             }
             if !model.job.isEmpty { Text(model.job).font(.subheadline).lineLimit(1) }
             if model.gcodeState == "RUNNING" || model.gcodeState == "PAUSE" || model.gcodeState == "PREPARE" {
-                ProgressView(value: Double(model.percent), total: 100)
+                ProgressBar(fraction: Double(model.percent) / 100)
                 HStack {
                     Text("\(model.percent)%")
                     Spacer()
@@ -66,13 +89,26 @@ struct ContentView: View {
                            "Print time BambuBar has observed since it was first started"))
             Divider()
             HStack {
-                Button(model.tr("Einstellungen", "Settings")) { SettingsWindow.show(model) }
-                Spacer()
-                Button(model.tr("Beenden", "Quit")) { NSApplication.shared.terminate(nil) }
+                if preview {
+                    fakeButton(model.tr("Einstellungen", "Settings"))
+                    Spacer()
+                    fakeButton(model.tr("Beenden", "Quit"))
+                } else {
+                    Button(model.tr("Einstellungen", "Settings")) { SettingsWindow.show(model) }
+                    Spacer()
+                    Button(model.tr("Beenden", "Quit")) { NSApplication.shared.terminate(nil) }
+                }
             }
         }
         .padding(12)
         .frame(width: 280)
+    }
+
+    private func fakeButton(_ title: String) -> some View {
+        Text(title)
+            .padding(.horizontal, 10).padding(.vertical, 3)
+            .background(RoundedRectangle(cornerRadius: 5).fill(Color.white.opacity(0.9)))
+            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.gray.opacity(0.4)))
     }
 }
 
@@ -117,5 +153,30 @@ enum SettingsWindow {
         window?.title = model.tr("BambuBar Einstellungen", "BambuBar Settings")
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+}
+
+/// Renders the popover with sample data (no printer needed) – used for the README screenshot.
+@MainActor
+func renderScreenshot(to path: String) {
+    let m = PrinterModel(preview: true)
+    m.language = "en"
+    m.connection = .connected
+    m.gcodeState = "RUNNING"
+    m.job = "Benchy_0.2mm_PLA"
+    m.percent = 64; m.remainingMin = 83; m.layer = 142; m.totalLayers = 222
+    m.nozzle = 219.6; m.nozzleTarget = 220; m.bed = 60; m.bedTarget = 60
+    m.ams = [AMSUnit(id: "0", level: 4, percent: 24)]
+    m.previewPrintSeconds = 127 * 3600 + 42 * 60
+    let view = ContentView(model: m, preview: true)
+        .background(Color(nsColor: .windowBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.gray.opacity(0.3)))
+        .padding(20)
+    let r = ImageRenderer(content: view)
+    r.scale = 2
+    if let img = r.nsImage, let tiff = img.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff),
+       let png = rep.representation(using: .png, properties: [:]) {
+        try? png.write(to: URL(fileURLWithPath: path))
     }
 }
