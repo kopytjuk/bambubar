@@ -44,6 +44,23 @@ struct ContentView: View {
                 Spacer()
                 Label("Bett \(Int(model.bed))° / \(Int(model.bedTarget))°", systemImage: "square.fill")
             }.font(.caption)
+            if !model.ams.isEmpty {
+                Divider()
+                ForEach(model.ams) { unit in
+                    HStack {
+                        Label("AMS \(Int(unit.id).map { $0 + 1 } ?? 0) Feuchte", systemImage: "humidity")
+                        Spacer()
+                        Text(unit.percent.map { "\($0)% (Stufe \(unit.level)/5)" } ?? "Stufe \(unit.level)/5")
+                    }.font(.caption)
+                }
+            }
+            Divider()
+            HStack {
+                Label("Druckzeit gesamt", systemImage: "clock")
+                Spacer()
+                Text(model.totalPrintText)
+            }.font(.caption)
+            .help("Summe der Druckzeit, die BambuBar seit dem ersten Start beobachtet hat")
             Divider()
             if showSettings {
                 TextField("IP-Adresse", text: model.$host)

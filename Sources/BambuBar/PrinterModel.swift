@@ -1,10 +1,20 @@
 import Foundation
 import SwiftUI
 
+struct AMSUnit: Identifiable {
+    let id: String
+    var level = 0        // humidity level 1-5 as reported by the printer
+    var percent: Int?    // raw humidity in %, only reported by newer AMS models
+}
+
 final class PrinterModel: ObservableObject {
     @AppStorage("host") var host = ""
     @AppStorage("serial") var serial = ""
     @AppStorage("accessCode") var accessCode = ""
+
+    /// Accumulated time spent in RUNNING state while this app was open (the printer does not report lifetime hours via MQTT).
+    @AppStorage("totalPrintSeconds") var totalPrintSeconds = 0.0
+    @Published var ams: [AMSUnit] = []
 
     @Published var connection = "Nicht konfiguriert"
     @Published var gcodeState = ""
@@ -28,6 +38,13 @@ final class PrinterModel: ObservableObject {
             DispatchQueue.main.async { self?.apply(p) }
         }
         if !host.isEmpty { connect() }
+        var last = Date()
+        Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            let now = Date()
+            if self.gcodeState == "RUNNING" { self.totalPrintSeconds += now.timeIntervalSince(last) }
+            last = now
+        }
     }
 
     func connect() {
@@ -50,6 +67,16 @@ final class PrinterModel: ObservableObject {
         if let v = p["subtask_name"] as? String { job = v }
         if let v = p["layer_num"] as? Int { layer = v }
         if let v = p["total_layer_num"] as? Int { totalLayers = v }
+        if let units = (p["ams"] as? [String: Any])?["ams"] as? [[String: Any]] {
+            for u in units {
+                guard let id = u["id"] as? String else { continue }
+                var unit = ams.first { $0.id == id } ?? AMSUnit(id: id)
+                if let h = u["humidity"] as? String, let n = Int(h) { unit.level = n }
+                if let r = u["humidity_raw"] as? String, let n = Int(r) { unit.percent = n }
+                if let i = ams.firstIndex(where: { $0.id == id }) { ams[i] = unit } else { ams.append(unit) }
+            }
+            ams.sort { $0.id < $1.id }
+        }
     }
 
     var stateText: String {
@@ -77,6 +104,11 @@ final class PrinterModel: ObservableObject {
 
     var remainingText: String {
         remainingMin >= 60 ? "\(remainingMin / 60)h \(remainingMin % 60)m" : "\(remainingMin)m"
+    }
+
+    var totalPrintText: String {
+        let h = Int(totalPrintSeconds) / 3600, m = Int(totalPrintSeconds) % 3600 / 60
+        return "\(h)h \(m)m"
     }
 
     var menuTitle: String {
