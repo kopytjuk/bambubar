@@ -26,14 +26,14 @@ final class PrinterModel: ObservableObject {
     }
 
     /// Where the status is shown. At least one of the two is always on, otherwise the app could not be reached.
-    @Published var showMenuBar: Bool = UserDefaults.standard.object(forKey: "showMenuBar") as? Bool ?? true {
+    @Published var showMenuBar: Bool = UserDefaults.standard.object(forKey: "showMenuBar") == nil ? true : UserDefaults.standard.bool(forKey: "showMenuBar") {
         didSet {
             UserDefaults.standard.set(showMenuBar, forKey: "showMenuBar")
             if !showMenuBar && !showWindow { showWindow = true }
             applyPresentation()
         }
     }
-    @Published var showWindow: Bool = UserDefaults.standard.object(forKey: "showWindow") as? Bool ?? false {
+    @Published var showWindow: Bool = UserDefaults.standard.bool(forKey: "showWindow") {
         didSet {
             UserDefaults.standard.set(showWindow, forKey: "showWindow")
             if !showWindow && !showMenuBar { showMenuBar = true }
