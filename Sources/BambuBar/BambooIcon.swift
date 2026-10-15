@@ -38,11 +38,12 @@ func drawBamboo(in rect: CGRect, color: NSColor) {
     }
 }
 
-func bambooMenuBarImage() -> NSImage {
+/// `template: false` draws plain black pixels (the offscreen README renderer does not tint template images).
+func bambooMenuBarImage(template: Bool = true) -> NSImage {
     let img = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { rect in
         drawBamboo(in: rect.insetBy(dx: 1, dy: 1), color: .black)
         return true
     }
-    img.isTemplate = true
+    img.isTemplate = template
     return img
 }
