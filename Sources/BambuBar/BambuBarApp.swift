@@ -12,7 +12,7 @@ struct BambuBarApp: App {
     }
 
     var body: some Scene {
-        MenuBarExtra(isInserted: Binding(get: { model.showMenuBar }, set: { model.showMenuBar = $0 })) {
+        MenuBarExtra(isInserted: Binding(get: { model.showMenuBar }, set: { if model.showMenuBar != $0 { model.showMenuBar = $0 } })) {
             ContentView(model: model)
         } label: {
             HStack(spacing: 4) {

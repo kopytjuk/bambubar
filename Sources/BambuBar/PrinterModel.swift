@@ -28,6 +28,7 @@ final class PrinterModel: ObservableObject {
     /// Where the status is shown. At least one of the two is always on, otherwise the app could not be reached.
     @Published var showMenuBar: Bool = UserDefaults.standard.object(forKey: "showMenuBar") == nil ? true : UserDefaults.standard.bool(forKey: "showMenuBar") {
         didSet {
+            guard showMenuBar != oldValue else { return }
             UserDefaults.standard.set(showMenuBar, forKey: "showMenuBar")
             if !showMenuBar && !showWindow { showWindow = true }
             applyPresentation()
@@ -35,6 +36,7 @@ final class PrinterModel: ObservableObject {
     }
     @Published var showWindow: Bool = UserDefaults.standard.bool(forKey: "showWindow") {
         didSet {
+            guard showWindow != oldValue else { return }
             UserDefaults.standard.set(showWindow, forKey: "showWindow")
             if !showWindow && !showMenuBar { showMenuBar = true }
             applyPresentation()
@@ -44,7 +46,8 @@ final class PrinterModel: ObservableObject {
     /// Without a menu bar item the app gets a Dock icon, so it can still be quit and reopened.
     func applyPresentation() {
         guard !isPreview else { return }
-        NSApp.setActivationPolicy(showMenuBar ? .accessory : .regular)
+        let policy: NSApplication.ActivationPolicy = showMenuBar ? .accessory : .regular
+        if NSApp.activationPolicy() != policy { NSApp.setActivationPolicy(policy) }
         FloatingWindow.set(visible: showWindow, model: self)
     }
 
