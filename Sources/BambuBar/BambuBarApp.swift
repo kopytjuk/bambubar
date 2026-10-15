@@ -94,7 +94,7 @@ struct SettingsView: View {
             }
             HStack {
                 Spacer()
-                Button(model.tr("Verbinden", "Connect")) { model.connect(); close() }
+                Button("OK") { model.connect(); close() }
                     .keyboardShortcut(.defaultAction)
             }
         }
