@@ -5,10 +5,6 @@ struct BambuBarApp: App {
     @StateObject private var model = PrinterModel()
 
     init() {
-        if let i = CommandLine.arguments.firstIndex(of: "--screenshot-menubar"), i + 1 < CommandLine.arguments.count {
-            MainActor.assumeIsolated { renderMenuBarScreenshot(to: CommandLine.arguments[i + 1]) }
-            exit(0)
-        }
         if let i = CommandLine.arguments.firstIndex(of: "--screenshot"), i + 1 < CommandLine.arguments.count {
             MainActor.assumeIsolated { renderScreenshot(to: CommandLine.arguments[i + 1]) }
             exit(0)
@@ -211,25 +207,5 @@ enum FloatingWindow {
             panel = p
         }
         panel?.orderFrontRegardless()
-    }
-}
-
-/// Renders the menu bar item on a menu-bar-like strip with sample data – used for the README.
-@MainActor
-func renderMenuBarScreenshot(to path: String) {
-    let view = HStack(spacing: 4) {
-        Image(nsImage: bambooMenuBarImage(template: false))
-        Text("64% · 1h 23m").font(.system(size: 13)).foregroundColor(.black)
-    }
-    .padding(.horizontal, 12)
-    .frame(height: 28)
-    .background(RoundedRectangle(cornerRadius: 8).fill(Color(white: 0.9)))
-    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.3)))
-    .padding(16)
-    let r = ImageRenderer(content: view)
-    r.scale = 2
-    if let img = r.nsImage, let tiff = img.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff),
-       let png = rep.representation(using: .png, properties: [:]) {
-        try? png.write(to: URL(fileURLWithPath: path))
     }
 }

@@ -9,10 +9,10 @@ A tiny macOS menu bar app that shows the live status of your **Bambu Lab** 3D pr
 While a print is running, the menu bar item shows progress and time left:
 
 <p align="center">
-  <img src="docs/menubar.png" width="200" alt="BambuBar menu bar item showing 64% and 1h 23m left">
+  <img src="docs/menubar.png" width="650" alt="BambuBar menu bar item showing progress and time left">
 </p>
 
-*(Screenshots rendered with sample data.)*
+*(The popover screenshot is rendered with sample data; the menu bar screenshot is real.)*
 
 ## Features
 
@@ -77,7 +77,7 @@ The printer uses a self-signed certificate, so BambuBar does not verify it. Only
 | `build_app.sh` | Builds `BambuBar.app` |
 | `tools/make_icon.sh` | Regenerates `Resources/AppIcon.icns` |
 
-Regenerate the screenshots with `swift build`, then `.build/debug/BambuBar --screenshot docs/screenshot.png` and `.build/debug/BambuBar --screenshot-menubar docs/menubar.png`.
+Regenerate the popover screenshot with `swift build && .build/debug/BambuBar --screenshot docs/screenshot.png`.
 
 ## Disclaimer
 
