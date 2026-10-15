@@ -3,7 +3,9 @@ import SwiftUI
 
 struct AMSUnit: Identifiable {
     let id: String
-    var level = 0        // humidity level 1-5 as reported by the printer
+    /// Display level: higher = more humid (the printer's own scale is the other way around).
+    var wetness: Int { level == 0 ? 0 : 6 - level }
+    var level = 0        // humidity level as reported by the printer: 5 = driest, 1 = wettest
     var percent: Int?    // raw humidity in %, only reported by newer AMS models
 }
 
