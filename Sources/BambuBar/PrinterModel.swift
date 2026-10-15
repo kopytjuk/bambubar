@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import SwiftUI
 
 struct AMSUnit: Identifiable {
@@ -22,6 +23,29 @@ final class PrinterModel: ObservableObject {
     /// "system", "de" or "en"
     @Published var language: String = UserDefaults.standard.string(forKey: "language") ?? "system" {
         didSet { if !isPreview { UserDefaults.standard.set(language, forKey: "language") } }
+    }
+
+    /// Where the status is shown. At least one of the two is always on, otherwise the app could not be reached.
+    @Published var showMenuBar: Bool = UserDefaults.standard.object(forKey: "showMenuBar") as? Bool ?? true {
+        didSet {
+            UserDefaults.standard.set(showMenuBar, forKey: "showMenuBar")
+            if !showMenuBar && !showWindow { showWindow = true }
+            applyPresentation()
+        }
+    }
+    @Published var showWindow: Bool = UserDefaults.standard.object(forKey: "showWindow") as? Bool ?? false {
+        didSet {
+            UserDefaults.standard.set(showWindow, forKey: "showWindow")
+            if !showWindow && !showMenuBar { showMenuBar = true }
+            applyPresentation()
+        }
+    }
+
+    /// Without a menu bar item the app gets a Dock icon, so it can still be quit and reopened.
+    func applyPresentation() {
+        guard !isPreview else { return }
+        NSApp.setActivationPolicy(showMenuBar ? .accessory : .regular)
+        FloatingWindow.set(visible: showWindow, model: self)
     }
 
     /// Preview models (used for the README screenshot) never connect and never touch stored settings.
@@ -50,6 +74,7 @@ final class PrinterModel: ObservableObject {
             DispatchQueue.main.async { self?.apply(p) }
         }
         if !host.isEmpty { connect() }
+        DispatchQueue.main.async { self.applyPresentation() }
         var last = Date()
         Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
             guard let self else { return }

@@ -5,7 +5,6 @@ struct BambuBarApp: App {
     @StateObject private var model = PrinterModel()
 
     init() {
-        NSApplication.shared.setActivationPolicy(.accessory)
         if let i = CommandLine.arguments.firstIndex(of: "--screenshot"), i + 1 < CommandLine.arguments.count {
             MainActor.assumeIsolated { renderScreenshot(to: CommandLine.arguments[i + 1]) }
             exit(0)
@@ -13,7 +12,7 @@ struct BambuBarApp: App {
     }
 
     var body: some Scene {
-        MenuBarExtra {
+        MenuBarExtra(isInserted: Binding(get: { model.showMenuBar }, set: { model.showMenuBar = $0 })) {
             ContentView(model: model)
         } label: {
             HStack(spacing: 4) {
@@ -128,6 +127,8 @@ struct SettingsView: View {
                 Text("Deutsch").tag("de")
                 Text("English").tag("en")
             }
+            Toggle(model.tr("In der Menüleiste anzeigen", "Show in menu bar"), isOn: $model.showMenuBar)
+            Toggle(model.tr("Schwebefenster anzeigen", "Show floating window"), isOn: $model.showWindow)
             HStack {
                 Spacer()
                 Button("OK") { model.connect(); close() }
@@ -178,5 +179,33 @@ func renderScreenshot(to path: String) {
     if let img = r.nsImage, let tiff = img.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff),
        let png = rep.representation(using: .png, properties: [:]) {
         try? png.write(to: URL(fileURLWithPath: path))
+    }
+}
+
+/// Small always-on-top window with the same content as the menu bar popover.
+enum FloatingWindow {
+    private static var panel: NSPanel?
+
+    static func set(visible: Bool, model: PrinterModel) {
+        if !visible { panel?.close(); return }
+        if panel == nil {
+            let controller = NSHostingController(rootView: ContentView(model: model))
+            controller.sizingOptions = [.preferredContentSize]
+            let p = NSPanel(contentViewController: controller)
+            p.styleMask = [.titled, .closable, .utilityWindow]
+            p.title = "BambuBar"
+            p.isFloatingPanel = true
+            p.level = .floating
+            p.hidesOnDeactivate = false
+            p.isReleasedWhenClosed = false
+            p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+            if !p.setFrameUsingName("BambuBarFloating") { p.center() }
+            p.setFrameAutosaveName("BambuBarFloating")
+            NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: p, queue: .main) { _ in
+                model.showWindow = false
+            }
+            panel = p
+        }
+        panel?.orderFrontRegardless()
     }
 }

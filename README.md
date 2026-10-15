@@ -15,6 +15,7 @@ A tiny macOS menu bar app that shows the live status of your **Bambu Lab** 3D pr
 - **Details in the popover** – job name, progress bar, layer count, nozzle and bed temperature
 - **AMS humidity** – per AMS unit, in % where the hardware reports it (otherwise as a 1–5 level)
 - **Total print time** – accumulated while BambuBar is running
+- **Menu bar or floating window** – the menu bar item is optional; turn it off and use a small always-on-top window instead (with a Dock icon), or use both
 - **English and German** – follows your system language, or pick one in Settings
 - **Local only** – talks directly to the printer on your network, no cloud, no account
 
@@ -41,7 +42,8 @@ For development you can also run `swift run`.
 
 1. Click the bamboo icon in the menu bar and choose **Settings**.
 2. Enter the printer's IP address, serial number and access code.
-3. Press **OK** – BambuBar connects and reconnects automatically if the connection drops.
+3. Optionally choose where BambuBar appears: *Show in menu bar* and/or *Show floating window* (at least one stays on).
+4. Press **OK** – BambuBar connects and reconnects automatically if the connection drops.
 
 Tip: give the printer a fixed IP address in your router so the setting never goes stale.
 
